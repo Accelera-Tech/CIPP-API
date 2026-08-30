@@ -27,7 +27,7 @@ jobs:
     environment: dev
     steps:
     - name: 'Checkout GitHub Action'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: 'Run Azure Functions Action'
       uses: Azure/functions-action@v1
