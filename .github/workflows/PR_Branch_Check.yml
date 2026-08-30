@@ -19,10 +19,13 @@ jobs:
     runs-on: ubuntu-slim
     steps:
       - name: Check and Comment on PR
-        # Only process fork PRs with specific branch conditions
-        # Must be a fork AND (source is main/master OR target is main/master)
+        # Only process PRs coming from a different repository. This workflow is
+        # inherited by forks, where head.repo.fork is also true for same-repo
+        # feature branches; comparing repository identities prevents a fork
+        # from closing its own pull requests to main/master.
         if: |
           github.event.pull_request.head.repo.fork == true &&
+          github.event.pull_request.head.repo.full_name != github.event.pull_request.base.repo.full_name &&
           ((github.event.pull_request.head.ref == 'main' || github.event.pull_request.head.ref == 'master') ||
           (github.event.pull_request.base.ref == 'main' || github.event.pull_request.base.ref == 'master'))
         uses: actions/github-script@v9
