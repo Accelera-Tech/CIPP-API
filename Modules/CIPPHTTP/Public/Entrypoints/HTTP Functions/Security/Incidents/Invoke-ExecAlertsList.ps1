@@ -20,7 +20,11 @@ function Invoke-ExecAlertsList {
         # Interact with query parameters or the body of the request.
         $TenantFilter = $Request.Query.tenantFilter
         $GraphRequest = if ($TenantFilter -ne 'AllTenants') {
-            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter
+            # Suntec's legacy Office 365 provider rejects delegated partner access.
+            # Its existing application grant returns both IPC and Office 365 alerts.
+            # Keep every other tenant on its existing authentication path.
+            $UseAppIdentity = $TenantFilter -in @('9e7c0b0b-7179-4b62-a5fd-818bcd905b0e', 'suntecconcrete.com')
+            $Alerts = New-GraphGetRequest -uri 'https://graph.microsoft.com/beta/security/alerts' -tenantid $TenantFilter -AsApp $UseAppIdentity -RequireCompleteSecurityAlerts -ErrorAction Stop
             $AlertsObj = foreach ($Alert in $Alerts) {
                 @{
                     Tenant        = $TenantFilter
