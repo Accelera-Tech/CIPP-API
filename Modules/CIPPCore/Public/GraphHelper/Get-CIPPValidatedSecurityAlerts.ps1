@@ -21,7 +21,7 @@ function Get-CIPPValidatedSecurityAlerts {
     do {
         $pageUri = [uri]$next
         if ($pageUri.Scheme -ne 'https' -or $pageUri.Host -ne 'graph.microsoft.com' -or
-            $pageUri.AbsolutePath -ne '/beta/security/alerts' -or $pageUri.Port -ne 443 -or
+            $pageUri.AbsolutePath -ne '/beta/security/alerts_v2' -or $pageUri.Port -ne 443 -or
             $pageUri.UserInfo -or $pageUri.Fragment -or !$visited.Add($next)) {
             throw 'Security alert feed rejected an invalid or repeated page URL.'
         }
@@ -44,14 +44,14 @@ function Get-CIPPValidatedSecurityAlerts {
                     foreach ($alert in $data.value) {
                         if ($null -eq $alert -or $alert -isnot [pscustomobject] -or
                             $alert.id -isnot [string] -or [string]::IsNullOrWhiteSpace($alert.id) -or
-                            $alert.status -notin @('newAlert', 'inProgress', 'resolved', 'dismissed', 'unknownFutureValue') -or
-                            $alert.azureTenantId -isnot [string] -or [string]::IsNullOrWhiteSpace($alert.azureTenantId)) {
+                            $alert.status -notin @('new', 'inProgress', 'resolved', 'unknownFutureValue') -or
+                            $alert.tenantId -isnot [string] -or [string]::IsNullOrWhiteSpace($alert.tenantId)) {
                             $valid = $false
                             break
                         }
                         # Tenant aliases remain supported; GUID callers additionally get exact tenant validation.
                         $tenantGuid = [guid]::Empty
-                        if ([guid]::TryParse($TenantId, [ref]$tenantGuid) -and $alert.azureTenantId -ne $TenantId) {
+                        if ([guid]::TryParse($TenantId, [ref]$tenantGuid) -and $alert.tenantId -ne $TenantId) {
                             $valid = $false
                             break
                         }
