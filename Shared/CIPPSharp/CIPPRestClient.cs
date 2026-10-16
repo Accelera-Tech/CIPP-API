@@ -725,8 +725,10 @@ namespace CIPP
                 // carries a Content-Encoding the handler cannot decode or a malformed/mislabeled body. Such a
                 // read failure must NOT mask the HTTP status: for an error response we surface the status code
                 // (the actionable signal - e.g. a 403 from EXO), and for a success response we surface a clear,
-                // attributable error instead of an opaque decompression exception. Callers that skip the error
-                // check (e.g. redirect / compliance-URL discovery) keep their headers and fall back to an empty body.
+                // attributable error instead of an opaque decompression exception. A successful response with
+                // an unreadable body must never be turned into an apparently valid empty result, even when the
+                // caller requested SkipHttpErrorCheck. Only failed responses whose callers explicitly skip the
+                // error check (e.g. redirect / compliance-URL discovery) may retain headers and an empty body.
                 string content;
                 try
                 {
@@ -736,7 +738,7 @@ namespace CIPP
                 }
                 catch (Exception ex) when (ex is InvalidDataException || ex is IOException)
                 {
-                    if (!(skipErrorCheck || noRedirect))
+                    if (response.IsSuccessStatusCode || !(skipErrorCheck || noRedirect))
                     {
                         TrackPoolResult(selection.Pool, response.IsSuccessStatusCode, statusCode);
                         var readFailMessage = !response.IsSuccessStatusCode

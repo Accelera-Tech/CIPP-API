@@ -26,6 +26,7 @@ function New-GraphGetRequest {
         # failure, pages already emitted have flowed downstream before the throw.
         [switch]$Stream,
         [switch]$UseCertificate,
+        [switch]$RequireCompleteSecurityAlerts,
         $Headers
     )
 
@@ -61,6 +62,13 @@ function New-GraphGetRequest {
 
         if (!$headers['User-Agent']) {
             $headers['User-Agent'] = Get-CippUserAgent
+        }
+
+        if ($RequireCompleteSecurityAlerts) {
+            if ($Stream -or $ReturnRawResponse -or $CountOnly -or $noPagination -or $SkipValueExtraction) {
+                throw 'Complete security-alert reads require buffered, fully paginated collection output.'
+            }
+            return Get-CIPPValidatedSecurityAlerts -Uri $uri -TenantId $tenantid -Headers $headers
         }
 
 
