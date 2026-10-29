@@ -27,7 +27,7 @@ function Invoke-ExecAlertsList {
             $AlertsObj = foreach ($Alert in $Alerts) {
                 @{
                     Tenant        = $TenantFilter
-                    GUID          = $GUID
+                    GUID          = (New-Guid).Guid
                     Id            = $Alert.Id
                     Title         = $Alert.Title
                     Category      = $Alert.category
@@ -98,7 +98,7 @@ function Invoke-ExecAlertsList {
                     $AlertInfo = $Alert.Alert | ConvertFrom-Json
                     @{
                         Tenant        = $Alert.Tenant
-                        GUID          = $GUID
+                        GUID          = (New-Guid).Guid
                         Id            = $AlertInfo.Id
                         Title         = $AlertInfo.Title
                         Category      = $AlertInfo.category
