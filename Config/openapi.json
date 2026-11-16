@@ -69062,7 +69062,7 @@
         "tags": [
           "Identity > Administration > Users"
         ],
-        "description": "Lists recent sign-in log entries for a specific Entra ID user, ordered by most recent.",
+        "description": "Lists sign-in log entries for a specific Entra ID user inside a bounded window (default the last 24 hours, max 72), most recent first, from Graph v1.0.",
         "parameters": [
           {
             "$ref": "#/components/parameters/tenantFilter"
@@ -69077,6 +69077,30 @@
           },
           {
             "name": "UserID",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "hours",
             "in": "query",
             "required": false,
             "schema": {

@@ -21,6 +21,9 @@ Function Invoke-ListSignIns {
     # Interact with query parameters or the body of the request.
     $TenantFilter = $Request.Query.tenantFilter
     $Days = $Request.Query.Days ?? 7
+    # A tenant-wide signIns query over a long range cannot finish inside Graph's 100 s limit. Cap it.
+    $ParsedDays = 0
+    $Days = if ([int]::TryParse([string]$Days, [ref]$ParsedDays) -and $ParsedDays -gt 0) { [Math]::Min($ParsedDays, 7) } else { 7 }
     $FailedLogonsOnly = $Request.Query.failedLogonsOnly
     $FailureThreshold = $Request.Query.FailureThreshold
     $Filter = $Request.Query.Filter
@@ -41,7 +44,9 @@ Function Invoke-ListSignIns {
         Write-LogMessage -headers $Headers -API $APINAME -message 'Retrieved sign in report' -Sev 'Debug' -tenant $TenantFilter
 
         # Single page only: full-range paging belongs to ListGraphRequest with manualPagination.
-        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/beta/auditLogs/signIns?api-version=beta&`$filter=$($Filters)" -tenantid $TenantFilter -noPagination $true -ErrorAction Stop
+        # v1.0, not beta (2026-11-16): the same windowed signIns query measured 3-51 s on v1.0 and 94 s on beta,
+        # and beta routinely ran past Graph's 100 s timeout, which CIPP surfaced as HTTP 500.
+        $GraphRequest = New-GraphGetRequest -uri "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=$($Filters)&`$top=999" -tenantid $TenantFilter -noPagination $true -ErrorAction Stop
         $response = $GraphRequest | Select-Object *,
         @{l = 'additionalDetails'; e = { $_.status.additionalDetails } } ,
         @{l = 'errorCode'; e = { $_.status.errorCode } },
