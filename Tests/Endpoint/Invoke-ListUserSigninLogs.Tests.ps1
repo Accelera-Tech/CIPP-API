@@ -52,7 +52,7 @@ Describe 'Invoke-ListUserSigninLogs' {
     }
 
     It 'clamps a window wider than 72 hours to the most recent 72' {
-        Mock -CommandName New-GraphBulkRequest -MockWith { $script:Reqs = @($Requests); @() }
+        Mock -CommandName New-GraphBulkRequest -MockWith { $script:Reqs = @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } }); @() }
         Invoke-ListUserSigninLogs -Request (New-SigninRequest -Query @{ startDate = '2026-10-01T00:00:00Z'; endDate = '2026-11-12T00:00:00Z' }) | Out-Null
         $script:Reqs[0].url | Should -Match 'createdDateTime ge 2026-11-09T00:00:00Z and'
         $script:Reqs[-1].url | Should -Match 'createdDateTime le 2026-11-12T00:00:00Z'
@@ -90,8 +90,8 @@ Describe 'Invoke-ListUserSigninLogs' {
             # Answer every slice with one row whose id is unique to the slice, timestamped at the slice start.
             Mock -CommandName New-GraphBulkRequest -MockWith {
                 $script:BulkCalls++
-                $script:Reqs = @($Requests)
-                foreach ($R in $Requests) {
+                $script:Reqs = @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } })
+                foreach ($R in @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } })) {
                     $From = [regex]::Match($R.url, 'createdDateTime ge (\S+)').Groups[1].Value
                     [pscustomobject]@{ id = $R.id; status = 200; body = [pscustomobject]@{ value = @([pscustomobject]@{ id = "row-$($R.id)"; createdDateTime = $From }) } }
                 }
@@ -111,6 +111,7 @@ Describe 'Invoke-ListUserSigninLogs' {
             $script:Reqs[1].url | Should -Match 'ge 2026-11-11T06:00:00Z and createdDateTime lt 2026-11-11T12:00:00Z'
             $script:Reqs[2].url | Should -Match 'ge 2026-11-11T12:00:00Z and createdDateTime lt 2026-11-11T18:00:00Z'
             $script:Reqs[3].url | Should -Match 'ge 2026-11-11T18:00:00Z and createdDateTime le 2026-11-12T00:00:00Z'
+            foreach ($R in $script:Reqs) { $R.rawUrl | Should -Not -Match ' ' }
         }
 
         It 'splits 72h into 12 slices, each at most 6h, covering the window exactly' {
@@ -141,7 +142,7 @@ Describe 'Invoke-ListUserSigninLogs' {
 
         It 'dedupes rows that appear in more than one slice and applies top to the merged set' {
             Mock -CommandName New-GraphBulkRequest -MockWith {
-                foreach ($R in $Requests) {
+                foreach ($R in @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } })) {
                     $Rows = @([pscustomobject]@{ id = 'dup'; createdDateTime = '2026-11-11T05:59:59Z' }, [pscustomobject]@{ id = "u-$($R.id)"; createdDateTime = '2026-11-11T0' + $R.id.Substring(5) + ':00:00Z' })
                     [pscustomobject]@{ id = $R.id; status = 200; body = [pscustomobject]@{ value = $Rows } }
                 }
@@ -153,7 +154,7 @@ Describe 'Invoke-ListUserSigninLogs' {
 
         It 'returns 200 with partial metadata naming the failed slice, keeping the other slices' {
             Mock -CommandName New-GraphBulkRequest -MockWith {
-                foreach ($R in $Requests) {
+                foreach ($R in @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } })) {
                     if ($R.id -eq 'slice1') {
                         [pscustomobject]@{ id = $R.id; status = 504; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'gateway timeout' } } }
                     } else {
@@ -182,7 +183,7 @@ Describe 'Invoke-ListUserSigninLogs' {
 
         It 'returns 500 when every slice fails' {
             Mock -CommandName New-GraphBulkRequest -MockWith {
-                foreach ($R in $Requests) { [pscustomobject]@{ id = $R.id; status = 500; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'boom' } } } }
+                foreach ($R in @($Requests | ForEach-Object { [pscustomobject]@{ id = $_.id; method = $_.method; url = [uri]::UnescapeDataString($_.url); rawUrl = $_.url } })) { [pscustomobject]@{ id = $R.id; status = 500; body = [pscustomobject]@{ error = [pscustomobject]@{ message = 'boom' } } } }
             }
             $Response = Invoke-ListUserSigninLogs -Request (New-SigninRequest -Query @{ hours = '24' })
             $Response.StatusCode | Should -Be 500

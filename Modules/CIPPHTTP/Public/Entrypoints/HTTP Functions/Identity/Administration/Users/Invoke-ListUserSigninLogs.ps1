@@ -120,7 +120,7 @@ Function Invoke-ListUserSigninLogs {
                 [pscustomobject]@{
                     id     = "slice$i"
                     method = 'GET'
-                    url    = "/auditLogs/signIns?`$filter=$Filter&`$top=$Top&`$orderby=createdDateTime desc"
+                    url    = "/auditLogs/signIns?`$filter=$([uri]::EscapeDataString($Filter))&`$top=$Top&`$orderby=createdDateTime%20desc"
                 }
             }
             $Responses = @(New-GraphBulkRequest -Requests @($Requests) -tenantid $TenantFilter -NoPaginateIds @($Requests.id) -Version 'v1.0')
